@@ -2,9 +2,9 @@
 -- Company: 
 -- Engineer: 
 -- 
--- Create Date: 07/29/2025 04:42:21 PM
+-- Create Date: 07/30/2025 09:15:40 PM
 -- Design Name: 
--- Module Name: ALS-7-Seg - Behavioral
+-- Module Name: spi_driver - RTL
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 
@@ -31,13 +31,13 @@ use IEEE.STD_LOGIC_1164.ALL;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-entity ALS-7-Seg is
+entity spi_driver is
 --  Port ( );
-end ALS-7-Seg;
+end spi_driver;
 
-architecture Behavioral of ALS-7-Seg is
+architecture RTL of spi_driver is
 
 begin
 
 
-end Behavioral;
+end RTL;
