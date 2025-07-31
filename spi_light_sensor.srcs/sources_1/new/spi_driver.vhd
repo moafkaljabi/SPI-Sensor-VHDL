@@ -21,26 +21,21 @@
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
--- Uncomment the following library declaration if using
--- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
 
--- Uncomment the following library declaration if instantiating
--- any Xilinx leaf cells in this code.
---library UNISIM;
---use UNISIM.VComponents.all;
+
 
 entity spi_driver is
     generic(
-        SPI_MODE            in  integer = 0;
-        CLKS_PER_HALF_BIT   in  integer = 12;
+        SPI_MODE            : in  integer := 0;
+        CLKS_PER_HALF_BIT   : in  integer := 12
     );
 
     port (
         -- Control Signals
         i_Clk   : in    std_logic;
-        i_nRst  : in    std_logic
+        i_nRst  : in    std_logic;
 
         -- Transmit Signals
         o_TX_Ready  : out   std_logic;                      --Low during Transmit
@@ -57,7 +52,7 @@ entity spi_driver is
         i_SPI_MISO  : in    std_logic
     );
 
-end spi_driver;
+end entity spi_driver;
 
 architecture RTL of spi_driver is
 
@@ -69,8 +64,8 @@ architecture RTL of spi_driver is
     signal r_SPI_Clk_Count      : integer range 0 to CLKS_PER_HALF_BIT *2 -1 ;
     signal r_SPI_Clk            : std_logic;
     signal r_SPI_Clk_Edges      : std_logic_vector range 0 to 16;
-    signal r_SPI_Leading_Edge   : std_logic;
-    signal r_SPI_Trailing_Edge  : std_logic;
+    signal r_Leading_Edge   : std_logic;
+    signal r_Trailing_Edge  : std_logic;
     
     signal r_TX_DV              : std_logic;            -- 1 cycle delayed of i_TX_DV, used to avoid timing issues.
     signal r_TX_Byte            : std_logic;            -- Stores a copy of the byte being transfered to avoid data being lost.
@@ -90,13 +85,13 @@ begin
     -- Generate SPI Clk when DV is pulled high
     Edge_Indicator : process(i_Clk, i_nRst) 
     begin
-        if i_nRst = '0'; then
+        if i_nRst = '0' then
             -- all to default
             o_TX_Ready          <= '0';
             r_SPI_Clk_Count     <= 0;
             r_SPI_Clk_Edges     <= 0;
-            r_SPI_Leading_Edge  <= '0';
-            r_SPI_Trailing_Edge <= '0';
+            r_Leading_Edge  <= '0';
+            r_Trailing_Edge <= '0';
             r_SPI_Clk           <= w_CPOL; -- Default idle state.
 
 
@@ -117,28 +112,28 @@ begin
                 o_TX_Ready <= '0';
 
                 -- Toggle the SPI clock, every full SPI period.
-                if r_SPI_Clk_Count = CLKS_PER_HALF_BIT *2 -1 then
-                    r_SPI_Clk_edges     <= r_SPI_Clk_Edges -1;
-                    r_SPI_Trailing_Edge <= '1'; -- Happens after full SPI Clk period.
+                if r_SPI_Clk_Count = CLKS_PER_HALF_BIT*2-1 then
+                    r_SPI_Clk_edges     <= r_SPI_Clk_Edges - 1;
+                    r_Trailing_Edge <= '1'; -- Happens after full SPI Clk period.
                     r_SPI_Clk_Count     <= 0; -- Restart the counter
                     r_SPI_Clk           <= not r_SPI_Clk;
                 
                 
                 -- Half SPI clk passed, now we toggle the Leading edge.
                 elsif r_SPI_Clk_Count = CLKS_PER_HALF_BIT -1 then
-                    r_SPI_Leading_Edge  <= '1';
+                    r_Leading_Edge  <= '1';
                     r_SPI_Clk_Count     <= r_SPI_Clk_Count +1; 
                     r_SPI_Clk           <= not r_SPI_Clk ;  
 
                 -- Keep counting
                 else 
-                    r_SPI_Clk_Count = r_SPI_Clk_Count;
+                    r_SPI_Clk_Count <= r_SPI_Clk_Count + 1;
                 end if;
             
 
         -- Idle state, not transmitting 
         else
-            o_TX_Ready = '1'; -- Ready to transmit next byte. 
+            o_TX_Ready <= '1'; -- Ready to transmit next byte. 
         end if;
     end if;
 
@@ -150,12 +145,12 @@ begin
     -- i_TX_DV = 1
     Byte_Reg : process(i_Clk, i_nRst)
     begin
-        if i_nRst = '0'; then
+        if i_nRst = '0' then
             i_TX_DV     <= '0';
             i_TX_Byte   <= X"00";
         elsif rising_edge(i_Clk) then
             r_TX_DV     <= i_TX_DV;
-            if i_TX_DV '1' then 
+            if i_TX_DV = '1' then 
                 r_TX_Byte   <= i_TX_Byte;
             end if;
         end if;
@@ -164,10 +159,61 @@ begin
 
 
     
-    -- Generates MOSI bitsream, sends one bit per clock edge 
+    -- Generates MOSI bitsream, sends one bit per clock edge; depending on CPHA(0 or 1).
     -- Sends bit to o_SPI_MOSI
     -- Trigger: SPI clock edges
+    MOSI_Data : process(i_Clk, i_nRst)
+    begin 
+        if i_nRst = '0' then 
+            o_SPI_MOSI      <= '0';
+            r_TX_Bit_Count  <= "111";
+        elsif rising_edge(i_Clk) then
+            if o_TX_Ready = '1' then
+                r_TX_Bit_Count <= "111"; -- Resetting for next byte.
+      -- Catch the case where we start transaction and CPHA = 0
+      elsif (r_TX_DV = '1' and w_CPHA = '0') then
+        o_SPI_MOSI     <= r_TX_Byte(7);
+        r_TX_Bit_Count <= "110";        -- 6
+      elsif (r_Leading_Edge = '1' and w_CPHA = '1') or (r_Trailing_Edge = '1' and w_CPHA = '0') then
+        r_TX_Bit_Count <= r_TX_Bit_Count - 1;
+        o_SPI_MOSI     <= r_TX_Byte(to_integer(r_TX_Bit_Count));
+      end if;
+    end if;
+  end process MOSI_Data;
 
 
+    -- Purpose: Read in MISO data.
+    MISO_Data : process (i_Clk, i_nRst)
+    begin
+        if i_nRst = '0' then
+        o_RX_Byte      <= X"00";
+        o_RX_DV        <= '0';
+        r_RX_Bit_Count <= "111";          -- Starts at 7
+        elsif rising_edge(i_Clk) then
+        -- Default Assignments
+        o_RX_DV <= '0';
 
-end RTL;
+        if o_TX_Ready = '1' then -- Check if ready, if so reset count to default
+            r_RX_Bit_Count <= "111";        -- Starts at 7
+        elsif (r_Leading_Edge = '1' and w_CPHA = '0') or (r_Trailing_Edge = '1' and w_CPHA = '1') then
+            o_RX_Byte(to_integer(r_RX_Bit_Count)) <= i_SPI_MISO;  -- Sample data
+            r_RX_Bit_Count <= r_RX_Bit_Count - 1;
+            if r_RX_Bit_Count = "000" then
+            o_RX_DV <= '1';   -- Byte done, pulse Data Valid
+            end if;
+        end if;
+        end if;
+    end process MISO_Data;
+    
+    
+    -- Purpose: Add clock delay to signals for alignment.
+    SPI_Clock : process (i_Clk, i_nRst)
+    begin
+        if i_nRst = '0' then
+        o_SPI_Clk  <= w_CPOL;
+        elsif rising_edge(i_Clk) then
+        o_SPI_Clk <= r_SPI_Clk;
+        end if;
+    end process SPI_Clock;
+  
+end architecture RTL;
