@@ -31,8 +31,11 @@ architecture TB of tb_spi_light_sensor is
   -- Component under test
   component spi_light_sensor
     Port(
+      --
       i_Switch_1 : in  std_logic;
       i_Clk      : in  std_logic;
+
+      --
       o_Segment1_A : out std_logic;
       o_Segment1_B : out std_logic;
       o_Segment1_C : out std_logic;
@@ -47,6 +50,8 @@ architecture TB of tb_spi_light_sensor is
       o_Segment2_E : out std_logic;
       o_Segment2_F : out std_logic;
       o_Segment2_G : out std_logic;
+
+
       o_SPI_Clk    : out std_logic;
       i_SPI_MISO   : in  std_logic;
       o_SPI_MOSI   : out std_logic;
