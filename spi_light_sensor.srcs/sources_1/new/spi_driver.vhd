@@ -63,15 +63,17 @@ architecture RTL of spi_driver is
     -- 
     signal r_SPI_Clk_Count      : integer range 0 to CLKS_PER_HALF_BIT *2 -1 ;
     signal r_SPI_Clk            : std_logic;
-    signal r_SPI_Clk_Edges      : std_logic_vector range 0 to 16;
-    signal r_Leading_Edge   : std_logic;
-    signal r_Trailing_Edge  : std_logic;
+    signal r_SPI_Clk_Edges      : integer range 0 to 16;
+    signal r_Leading_Edge       : std_logic;
+    signal r_Trailing_Edge      : std_logic;
     
-    signal r_TX_DV              : std_logic;            -- 1 cycle delayed of i_TX_DV, used to avoid timing issues.
-    signal r_TX_Byte            : std_logic;            -- Stores a copy of the byte being transfered to avoid data being lost.
+    signal r_TX_DV              : std_logic;                    -- 1 cycle delayed of i_TX_DV, used to avoid timing issues.
+    signal r_TX_Byte            : std_logic_vector(7 downto 0); -- Stores a copy of the byte being transfered to avoid data being lost.
 
     signal r_TX_Bit_Count       : Unsigned(2 downto 0);
     signal r_RX_Bit_Count       : Unsigned(2 downto 0);
+
+    signal r_TX_Ready           : std_logic := '1';
 
 begin
     
@@ -87,11 +89,11 @@ begin
     begin
         if i_nRst = '0' then
             -- all to default
-            o_TX_Ready          <= '0';
+            r_TX_Ready          <= '0';
             r_SPI_Clk_Count     <= 0;
             r_SPI_Clk_Edges     <= 0;
-            r_Leading_Edge  <= '0';
-            r_Trailing_Edge <= '0';
+            r_Leading_Edge      <= '0';
+            r_Trailing_Edge     <= '0';
             r_SPI_Clk           <= w_CPOL; -- Default idle state.
 
 
@@ -102,14 +104,14 @@ begin
             r_Trailing_Edge <= '0';
 
             -- Transmission begins
-            -- if we have valid data to send -> disable o_TX_Ready and Initializ r_SPI_Clk_Edges
+            -- if we have valid data to send -> disable r_TX_Ready and Initializ r_SPI_Clk_Edges
             if i_TX_DV = '1' then
-                o_TX_Ready      <= '0';
+                r_TX_Ready      <= '0';
                 r_SPI_Clk_Edges <= 16;
 
             -- Transmitting
             elsif r_SPI_Clk_Edges > 0 then -- Still not 0 so keep transmitting.
-                o_TX_Ready <= '0';
+                r_TX_Ready <= '0';
 
                 -- Toggle the SPI clock, every full SPI period.
                 if r_SPI_Clk_Count = CLKS_PER_HALF_BIT*2-1 then
@@ -133,7 +135,7 @@ begin
 
         -- Idle state, not transmitting 
         else
-            o_TX_Ready <= '1'; -- Ready to transmit next byte. 
+            r_TX_Ready <= '1'; -- Ready to transmit next byte. 
         end if;
     end if;
 
@@ -146,8 +148,8 @@ begin
     Byte_Reg : process(i_Clk, i_nRst)
     begin
         if i_nRst = '0' then
-            i_TX_DV     <= '0';
-            i_TX_Byte   <= X"00";
+            r_TX_DV     <= '0';
+            r_TX_Byte   <= X"00";
         elsif rising_edge(i_Clk) then
             r_TX_DV     <= i_TX_DV;
             if i_TX_DV = '1' then 
@@ -168,7 +170,7 @@ begin
             o_SPI_MOSI      <= '0';
             r_TX_Bit_Count  <= "111";
         elsif rising_edge(i_Clk) then
-            if o_TX_Ready = '1' then
+            if r_TX_Ready = '1' then
                 r_TX_Bit_Count <= "111"; -- Resetting for next byte.
       -- Catch the case where we start transaction and CPHA = 0
       elsif (r_TX_DV = '1' and w_CPHA = '0') then
@@ -193,7 +195,7 @@ begin
         -- Default Assignments
         o_RX_DV <= '0';
 
-        if o_TX_Ready = '1' then -- Check if ready, if so reset count to default
+        if r_TX_Ready = '1' then -- Check if ready, if so reset count to default
             r_RX_Bit_Count <= "111";        -- Starts at 7
         elsif (r_Leading_Edge = '1' and w_CPHA = '0') or (r_Trailing_Edge = '1' and w_CPHA = '1') then
             o_RX_Byte(to_integer(r_RX_Bit_Count)) <= i_SPI_MISO;  -- Sample data
@@ -216,4 +218,6 @@ begin
         end if;
     end process SPI_Clock;
   
+    o_TX_Ready <= r_TX_Ready;
+
 end architecture RTL;

@@ -22,11 +22,9 @@
 ------------------------------------------------------------------------------/
 -- Description:       Test bench for SPI Master module
 ------------------------------------------------------------------------------/
-
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
-
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity spi_driver_tb is
 end entity spi_driver_tb;
@@ -63,6 +61,20 @@ architecture Behavioral of spi_driver_tb is
     wait until rising_edge(w_Master_TX_Ready);
   end procedure SendSingleByte;
 
+    -- Conversion function
+  function slv_to_bv(slv: std_logic_vector) return bit_vector is
+    variable bv: bit_vector(slv'range);
+  begin
+    for i in slv'range loop
+      if slv(i) = '1' then
+        bv(i) := '1';
+      else
+        bv(i) := '0';
+      end if;
+    end loop;
+    return bv;
+  end function;
+
 begin  -- architecture Behavioral
 
    -- Clock Generators:
@@ -75,7 +87,7 @@ begin  -- architecture Behavioral
       CLKS_PER_HALF_BIT => CLKS_PER_HALF_BIT)
     port map (
       -- Control/Data Signals,
-      i_Rst_L    => r_Rst_L,            -- FPGA Reset
+      i_nRst    => r_Rst_L,            -- FPGA Reset
       i_Clk      => r_Clk,              -- FPGA Clock
       -- TX (MOSI) Signals
       i_TX_Byte  => r_Master_TX_Byte,          -- Byte to transmit
@@ -99,16 +111,17 @@ begin  -- architecture Behavioral
     
     -- Test single byte
     SendSingleByte(X"C1", r_Master_TX_Byte, r_Master_TX_DV);
-    report "Sent out 0xC1, Received 0x" & to_hstring(unsigned(r_Master_RX_Byte));
+    report "Sent out 0xC1, Received 0x" & to_hstring(slv_to_bv(r_Master_RX_Byte));
       
     -- Test double byte
     SendSingleByte(X"BE", r_Master_TX_Byte, r_Master_TX_DV);
-    report "Sent out 0xBE, Received 0x" & to_hstring(unsigned(r_Master_RX_Byte));
+    report "Sent out 0xBE, Received 0x" & to_hstring(slv_to_bv(r_Master_RX_Byte));
 
     SendSingleByte(X"EF", r_Master_TX_Byte, r_Master_TX_DV);
-    report "Sent out 0xEF, Received 0x" & to_hstring(unsigned(r_Master_RX_Byte));
+    report "Sent out 0xEF, Received 0x" & to_hstring(slv_to_bv(r_Master_RX_Byte));
     wait for 50 ns;
     assert false report "Test Complete" severity failure;
   end process Testing;
 
 end architecture Behavioral;
+
