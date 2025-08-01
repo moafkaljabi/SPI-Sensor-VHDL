@@ -29,7 +29,7 @@ use IEEE.NUMERIC_STD.ALL;
 entity spi_driver is
     generic(
         SPI_MODE            : in  integer := 0;
-        CLKS_PER_HALF_BIT   : in  integer := 12
+        CLKS_PER_HALF_BIT   : in  integer := 2
     );
 
     port (

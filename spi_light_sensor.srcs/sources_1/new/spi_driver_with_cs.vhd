@@ -69,6 +69,10 @@ architecture RTL of spi_driver_with_cs is
   signal r_TX_Count : integer range 0 to MAX_BYTES_PER_CS + 1;
   signal w_Master_Ready : std_logic;
 
+  signal r_RX_DV    : std_logic;
+  signal r_RX_Count : std_logic_vector(o_RX_Count'range);
+
+
 begin
 
   -- Instantiate Master
@@ -146,9 +150,9 @@ begin
   begin
     if rising_edge(i_Clk) then
       if r_CS_n = '1' then
-        o_RX_Count <= std_logic_vector(to_unsigned(0, o_RX_Count'length));
-      elsif o_RX_DV = '1' then
-        o_RX_Count <= std_logic_vector(unsigned(o_RX_Count) + 1);
+        r_RX_Count <= std_logic_vector(to_unsigned(0, r_RX_Count'length));
+      elsif r_RX_DV = '1' then
+        r_RX_Count <= std_logic_vector(unsigned(r_RX_Count) + 1);
       end if;
     end if;
   end process RX_COUNT;
@@ -156,5 +160,8 @@ begin
   o_SPI_CS_n <= r_CS_n;
 
   o_TX_Ready <= '1' when i_TX_DV /= '1' and ((r_SM_CS = IDLE) or (r_SM_CS = TRANSFER and w_Master_Ready = '1' and r_TX_Count > 0)) else '0'; 
+
+  o_RX_Count <= r_RX_Count;
+  o_RX_DV    <= r_RX_DV;
 
 end architecture RTL;

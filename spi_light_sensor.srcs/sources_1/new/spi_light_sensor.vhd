@@ -61,7 +61,7 @@ architecture RTL of spi_light_sensor is
   -- CPOL = 1 and CPHA = 1, based on ADC part ADC08S021
   constant SPI_MODE : integer := 3;
 
-  -- Go Board operates at 25 MHz, so divide by 10 to get to 2.5 MHz.
+  -- Board operates at 25 MHz, so divide by 10 to get to 2.5 MHz.
   -- This is clocks per half bit, so divide 10 by 2 to get 5.
   constant CLKS_PER_HALF_BIT : integer := 5;
 
