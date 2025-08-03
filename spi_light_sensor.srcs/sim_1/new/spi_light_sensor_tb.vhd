@@ -102,7 +102,8 @@ begin
   end process;
 
   -- Instantiate Unit Under Test
-  UUT: spi_light_sensor
+  UUT : entity work.spi_light_sensor
+
     port map (
       i_Switch_1 => s_Switch_1,
       i_Clk      => s_Clk,

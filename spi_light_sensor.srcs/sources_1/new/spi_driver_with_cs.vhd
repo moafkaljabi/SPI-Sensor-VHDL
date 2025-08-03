@@ -35,7 +35,7 @@ entity spi_driver_with_cs is
     );
   port (
    -- Control/Data Signals,
-   i_Rst_L : in std_logic;     -- FPGA Reset
+   i_nRst  : in std_logic;     -- FPGA Reset
    i_Clk   : in std_logic;     -- FPGA Clock
    
    -- TX (MOSI) Signals
@@ -82,7 +82,7 @@ begin
       CLKS_PER_HALF_BIT => CLKS_PER_HALF_BIT)
     port map (
       -- Control/Data Signals,
-      i_nRst     => i_Rst_L,            -- FPGA Reset
+      i_nRst     => i_nRst,            -- FPGA Reset
       i_Clk      => i_Clk,              -- FPGA Clock
       -- TX (MOSI) Signals
       i_TX_Byte  => i_TX_Byte,          -- Byte to transmit
@@ -99,9 +99,9 @@ begin
   
 
   -- Purpose: Control CS line using State Machine
-  SM_CS : process (i_Clk, i_Rst_L) is
+  SM_CS : process (i_Clk, i_nRst) is
   begin
-    if i_Rst_L = '0' then
+    if i_nRst = '0' then
       r_SM_CS             <= IDLE;
       r_CS_n              <= '1';   -- Resets to high
       r_TX_Count          <= 0;

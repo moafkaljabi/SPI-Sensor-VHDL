@@ -28,8 +28,8 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity spi_driver is
     generic(
-        SPI_MODE            : in  integer := 0;
-        CLKS_PER_HALF_BIT   : in  integer := 2
+        SPI_MODE            :  integer := 0;
+        CLKS_PER_HALF_BIT   :  integer := 2
     );
 
     port (
@@ -123,6 +123,7 @@ begin
                 
                 -- Half SPI clk passed, now we toggle the Leading edge.
                 elsif r_SPI_Clk_Count = CLKS_PER_HALF_BIT -1 then
+                    r_SPI_Clk_Edges <= r_SPI_Clk_Edges -1
                     r_Leading_Edge  <= '1';
                     r_SPI_Clk_Count     <= r_SPI_Clk_Count +1; 
                     r_SPI_Clk           <= not r_SPI_Clk ;  
@@ -148,8 +149,8 @@ begin
     Byte_Reg : process(i_Clk, i_nRst)
     begin
         if i_nRst = '0' then
-            r_TX_DV     <= '0';
             r_TX_Byte   <= X"00";
+            r_TX_DV     <= '0';
         elsif rising_edge(i_Clk) then
             r_TX_DV     <= i_TX_DV;
             if i_TX_DV = '1' then 

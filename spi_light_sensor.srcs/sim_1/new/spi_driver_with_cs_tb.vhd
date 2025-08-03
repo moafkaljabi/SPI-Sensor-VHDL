@@ -30,12 +30,12 @@ end spi_driver_with_cs_tb;
 
 architecture Behavioral of spi_driver_with_cs_tb is
 
-  constant SPI_MODE : integer := 3;           -- CPOL = 1, CPHA = 1
-  constant CLKS_PER_HALF_BIT : integer := 5;  -- 6.25 MHz
-  constant MAX_BYTES_PER_CS : integer := 2;   -- 2 bytes per chip select
-  constant CS_INACTIVE_CLKS : integer := 10;  -- Adds delay between bytes
+  constant SPI_MODE           : integer := 3;           -- CPOL = 1, CPHA = 1
+  constant CLKS_PER_HALF_BIT  : integer := 5;  -- 6.25 MHz
+  constant MAX_BYTES_PER_CS   : integer := 2;   -- 2 bytes per chip select
+  constant CS_INACTIVE_CLKS   : integer := 10;  -- Adds delay between bytes
   
-  signal  r_Rst_L    : std_logic := '0';
+  signal  r_nRst     : std_logic := '0';
   signal  w_SPI_Clk  : std_logic;
   signal  r_Clk      : std_logic := '0';
   signal  w_SPI_CS_n : std_logic;
@@ -64,9 +64,26 @@ architecture Behavioral of spi_driver_with_cs_tb is
     wait until rising_edge(w_Master_TX_Ready);
   end procedure SendSingleByte;
 
+
+        -- Conversion function
+  function slv_to_bv(slv: std_logic_vector) return bit_vector is
+    variable bv: bit_vector(slv'range);
+  begin
+    for i in slv'range loop
+      if slv(i) = '1' then
+        bv(i) := '1';
+      else
+        bv(i) := '0';
+      end if;
+    end loop;
+    return bv;
+  end function;
+
+
 begin  -- architecture 
 
   -- Clock Generators:
+  -- r_Clk <= not r_Clk after 2 ns;
   r_Clk <= not r_Clk after 2 ns;
 
   -- Instantiate UUT
@@ -77,7 +94,7 @@ begin  -- architecture
       MAX_BYTES_PER_CS  => MAX_BYTES_PER_CS,
       CS_INACTIVE_CLKS  => CS_INACTIVE_CLKS)
     port map (
-      i_Rst_L    => r_Rst_L,
+      i_nRst    => r_nRst,
       i_Clk      => r_Clk,
       -- TX (MOSI) Signals
       i_TX_Count => r_Master_TX_Count,  -- Number of bytes per CS         
@@ -95,18 +112,19 @@ begin  -- architecture
       o_SPI_CS_n => w_SPI_CS_n
       );
 
+
   Testing : process is
   begin
     wait for 100 ns;
-    r_Rst_L <= '0';
+    r_nRst <= '0';
     wait for 100 ns;
-    r_Rst_L <= '1';
+    r_nRst <= '1';
 
     -- Test sending 2 bytes
     SendSingleByte(X"C1", r_Master_TX_Byte, r_Master_TX_DV);
-    report "Sent out 0xC1, Received 0x" & to_hstring(unsigned(w_Master_RX_Byte));
+    report "Sent out 0xC1, Received 0x" & to_hstring(slv_to_bv(w_Master_RX_Byte));
     SendSingleByte(X"C2", r_Master_TX_Byte, r_Master_TX_DV);
-    report "Sent out 0xC2, Received 0x" & to_hstring(unsigned(w_Master_RX_Byte)); 
+    report "Sent out 0xC2, Received 0x" & to_hstring(slv_to_bv(w_Master_RX_Byte)); 
     wait for 100 ns;
     assert false report "Test Complete" severity failure;
   end process Testing;

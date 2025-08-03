@@ -18,10 +18,6 @@
 -- 
 ----------------------------------------------------------------------------------
 
-
-------------------------------------------------------------------------------/
--- Description:       Test bench for SPI Master module
-------------------------------------------------------------------------------/
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -87,7 +83,7 @@ begin  -- architecture Behavioral
       CLKS_PER_HALF_BIT => CLKS_PER_HALF_BIT)
     port map (
       -- Control/Data Signals,
-      i_nRst    => r_Rst_L,            -- FPGA Reset
+      i_nRst    => r_nRst,            -- FPGA Reset
       i_Clk      => r_Clk,              -- FPGA Clock
       -- TX (MOSI) Signals
       i_TX_Byte  => r_Master_TX_Byte,          -- Byte to transmit
@@ -120,7 +116,7 @@ begin  -- architecture Behavioral
     SendSingleByte(X"EF", r_Master_TX_Byte, r_Master_TX_DV);
     report "Sent out 0xEF, Received 0x" & to_hstring(slv_to_bv(r_Master_RX_Byte));
     wait for 50 ns;
-    assert false report "Test Complete" severity failure;
+    assert false report "Test Complete" severity note;
   end process Testing;
 
 end architecture Behavioral;
