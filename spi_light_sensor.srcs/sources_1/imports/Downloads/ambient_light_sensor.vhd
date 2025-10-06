@@ -71,4 +71,5 @@ BEGIN
 
     als_data <= spi_rx_data(12 DOWNTO 5);   --assign ambient light data bits to output
 
+
 END behavior;
